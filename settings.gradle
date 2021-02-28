@@ -1,0 +1,3 @@
+include ':firestoreOfflineFirst'
+include ':app'
+rootProject.name = "FirestoreOfflineFirstAndroid"
