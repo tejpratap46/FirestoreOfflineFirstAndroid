@@ -1,17 +1,20 @@
 package com.tejpratapsingh.firestoreofflinefirst.utilities
 
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.lang.reflect.Type
 
 
 class Utils {
 
     companion object {
-        fun getJsonToMap(json: String): HashMap<*, *>? {
+        fun getJsonToMap(json: String): MutableMap<String, Any> {
             val gson = Gson()
-            return gson.fromJson(json, HashMap::class.java)
+            val type: Type = object : TypeToken<MutableMap<String, Any>>() {}.type
+            return gson.fromJson(json, type)
         }
 
-        fun getMapToJson(map: HashMap<String, Any>): String {
+        fun getMapToJson(map: Map<String, Any>): String {
             val gson = Gson()
             return gson.toJson(map)
         }

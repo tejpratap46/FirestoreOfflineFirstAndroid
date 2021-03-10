@@ -19,10 +19,10 @@ A. If your app is an 'Offline First' means it maintains a database (SQLite, Real
 - You need user(all) data on the device locally available to be able to serve your user completely offline.
 - Now your user wants to login to second device, you can either:
   - Download all data from firestore and build your local DB from scratch and probably exploding your Daily Quota.
-  - Or you download a backup of user's DB[SQLite/Realm] from a backup[Firebase Storage/AWS S3] and continue firestore sync from that point and save Read Cost.
+  - Or you download a backup of user's DB[SQLite/Realm] from a backup[Firebase Storage/AWS S3/Google Drive] and continue firestore sync from that point and save Read Cost.
 
 ##### Lets see what it takes to implement second way of syncing
-1. Create backup of your local DB in S3 Or Firbase Storage.
+1. Create backup of your local DB in S3 Or Firebase Storage Or user's Google Drive.
 2. Restore DB after login.
 3. Know till where that DB has data and read remaining of data from firestore.
 4. Now, only new data should be written or read from firestore to keep devices in sync.

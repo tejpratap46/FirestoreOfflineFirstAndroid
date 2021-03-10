@@ -22,8 +22,11 @@ class FirestoreSyncMaster(
         @Delete
         fun delete(firestoreSyncMaster: FirestoreSyncMaster)
 
-        @Query("SELECT * FROM FirestoreSyncMaster where collectionName= :collectionName limit 1")
-        fun getSyncMasterByCollectionName(collectionName: String): FirestoreSyncMaster?
+        @Query("SELECT * FROM FirestoreSyncMaster ORDER BY downloadedTill ASC LIMIT 1")
+        fun getMinSyncMaster(): List<FirestoreSyncMaster>
+
+        @Query("SELECT * FROM FirestoreSyncMaster WHERE collectionName= :collectionName LIMIT 1")
+        fun getSyncMasterByCollectionName(collectionName: String): List<FirestoreSyncMaster>
 
         @Query("SELECT * FROM FirestoreSyncMaster")
         fun getAllSyncMaster(): List<FirestoreSyncMaster>
