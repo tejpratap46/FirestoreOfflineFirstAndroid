@@ -26,3 +26,44 @@ A. If your app is an 'Offline First' means it maintains a database (SQLite, Real
 2. Restore DB after login.
 3. Know till where that DB has data and read remaining of data from firestore.
 4. Now, only new data should be written or read from firestore to keep devices in sync.
+
+## Setup
+#### Create Firestrore Indexes
+1. This library uses collection`userDevices` to tracks user's devices, add one index for this collection
+```json
+{
+  "collectionName": "userDevices",
+  "fields": [
+    {
+      "name": "userId",
+      "sortOrder":  "Ascending"
+    },
+    {
+      "name": "uploadedAt",
+      "sortOrder":  "Ascending"
+    }
+  ],
+  "queryScope": "Collection"
+}
+```
+2. Now you have to add Indexes for every other collection you use
+```json
+{
+  "collectionName": "userDevices",
+  "fields": [
+    {
+      "name": "userId",
+      "sortOrder":  "Ascending"
+    },
+    {
+      "name": "updatedBy",
+      "sortOrder":  "Ascending"
+    },
+    {
+      "name": "uploadedAt",
+      "sortOrder":  "Ascending"
+    }
+  ],
+  "queryScope": "Collection"
+}
+```

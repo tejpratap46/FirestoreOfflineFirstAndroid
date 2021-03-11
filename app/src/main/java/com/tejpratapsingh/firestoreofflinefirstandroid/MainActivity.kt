@@ -1,19 +1,18 @@
 package com.tejpratapsingh.firestoreofflinefirstandroid
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
+import com.tejpratapsingh.firestoreofflinefirst.database.table.FirestoreSyncMaster
 import com.tejpratapsingh.firestoreofflinefirst.firestore.FirestoreOfflineManager
-import com.tejpratapsingh.firestoreofflinefirst.firestore.FirestoreSyncManager
 import com.tejpratapsingh.firestoreofflinefirstandroid.memory.UserTable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 
 class MainActivity : AppCompatActivity() {
@@ -41,6 +40,7 @@ class MainActivity : AppCompatActivity() {
                     // Initialise offline store
                     FirestoreOfflineManager.getInstance()
                         .initialise(applicationContext, firestore, user.uid)
+                        .initialiseSyncMasters(ArrayList())
 
                     FirestoreOfflineManager.getInstance().addData(
                         "user",
@@ -54,8 +54,7 @@ class MainActivity : AppCompatActivity() {
 
                     val coroutineScope = CoroutineScope(Dispatchers.Default)
                     coroutineScope.async {
-                        FirestoreSyncManager.getInstance()
-                            .startSync(applicationContext, firestore, user.uid)
+                        SyncManager().startSync(applicationContext)
                     }
 
                 } else {

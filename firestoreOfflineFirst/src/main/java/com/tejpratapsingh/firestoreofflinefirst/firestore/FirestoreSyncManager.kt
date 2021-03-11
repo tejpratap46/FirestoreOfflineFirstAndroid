@@ -5,6 +5,7 @@ import android.net.Uri
 import android.util.Log
 import com.google.android.gms.tasks.Tasks
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.*
 import com.google.firebase.firestore.ktx.firestoreSettings
 import com.google.firebase.storage.FileDownloadTask
@@ -23,7 +24,7 @@ import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
-class FirestoreSyncManager {
+abstract class FirestoreSyncManager {
 
     enum class FIREBASE_COLLECTION_PROPERTIES(val propertyName: String) {
         USER_ID("userId"),
@@ -47,17 +48,13 @@ class FirestoreSyncManager {
     companion object {
         private val TAG = "FirestoreSyncManager"
 
-        private var instance: FirestoreSyncManager? = null
+        private val syncLock: Any = Any()
 
-        fun getInstance(): FirestoreSyncManager {
-            if (instance == null) {
-                synchronized(FirestoreSyncManager::class) {
-                    instance = FirestoreSyncManager()
-                }
-            }
-            return instance!!
-        }
+        private var isSyncRunning = false
     }
+
+    protected abstract fun getFirestore(): FirebaseFirestore
+    protected abstract fun getFirebaseAuth(): FirebaseAuth
 
     private val activeDeviceList: ArrayList<String> = ArrayList()
 
@@ -69,17 +66,27 @@ class FirestoreSyncManager {
      * @param firebaseUserId Firebase Auth User Id
      */
     @Throws(Exception::class)
-    fun
-            startSync(
-        applicationContext: Context,
-        firestore: FirebaseFirestore,
-        firebaseUserId: String?
+    open fun startSync(
+        applicationContext: Context
     ) {
-        Tasks.await(firestore.clearPersistence())
+        Log.d(TAG, "startSync: called")
+        if (isSyncRunning) {
+            throw Exception("Sync already runnung")
+        }
+
+        // Activate lock
+        synchronized(syncLock) {
+            isSyncRunning = true;
+        }
+
+        val firebaseUserId: String? = getFirebaseAuth().currentUser?.uid
+
+        Log.d(TAG, "startSync: firebaseUserId: $firebaseUserId")
+
         val settings = firestoreSettings {
             isPersistenceEnabled = false
         }
-        firestore.firestoreSettings = settings
+        getFirestore().firestoreSettings = settings
 
         val firesoreRoomManager: FirestoreRoomManager =
             FirestoreRoomManager.getInstance(applicationContext)
@@ -89,6 +96,7 @@ class FirestoreSyncManager {
             firesoreRoomManager.firestoreLocalSettingsDao().getLocalSettings().getFirstOrNull()
 
         if (firestoreLocalSettings == null) {
+            Log.e(TAG, "startSync: error", Exception("FirestoreOfflineManager not initialised"))
             throw Exception("FirestoreOfflineManager not initialised")
         }
 
@@ -103,7 +111,7 @@ class FirestoreSyncManager {
         }
 
         val userDeviceQuery: QuerySnapshot = Tasks.await(
-            firestore.collection(FIREBASE_COLLECTION.USER_DEVICES.collectionName)
+            getFirestore().collection(FIREBASE_COLLECTION.USER_DEVICES.collectionName)
                 .whereGreaterThan(
                     USER_DEVICE_PROPERTIES.UPLOADED_AT.propertyName,
                     Date(minDownloadedTill)
@@ -122,6 +130,9 @@ class FirestoreSyncManager {
             }
         }
 
+        // Remove current device, as we do not want to fetch changes that are made by this device again
+        activeDeviceList.remove(firestoreLocalSettings.deviceInstallationId)
+
         // Download Changes from firestore
         val syncMasters: List<FirestoreSyncMaster> =
             firesoreRoomManager.firestoreSyncMasterDao().getAllSyncMaster()
@@ -131,7 +142,7 @@ class FirestoreSyncManager {
             val downloadedTill: Long = firestoreSyncMaster.downloadedTill
 
             val querySnapshot: QuerySnapshot = Tasks.await(
-                firestore.collection(collectionName)
+                getFirestore().collection(collectionName)
                     .whereGreaterThan(
                         FIREBASE_COLLECTION_PROPERTIES.UPLOADED_AT.propertyName,
                         Date(downloadedTill)
@@ -218,6 +229,8 @@ class FirestoreSyncManager {
         val updatedDocuments: List<FirestoreSyncTracker> =
             firesoreRoomManager.firestoreSyncTrackerDao().getAllUpdatedDocuments(true)
 
+        Log.d(TAG, "startSync: Updated Locally Docs: " + updatedDocuments.size)
+
         updatedDocuments.forEach { firestoreSyncTracker ->
             // upload document
             val dataMap: MutableMap<String, Any> = Utils.getJsonToMap(firestoreSyncTracker.data)
@@ -237,7 +250,7 @@ class FirestoreSyncManager {
                 firestoreSyncTracker.deleted
 
             Tasks.await(
-                firestore.collection(firestoreSyncTracker.collectionName)
+                getFirestore().collection(firestoreSyncTracker.collectionName)
                     .document(firestoreSyncTracker.firestoreId).set(dataMap)
             )
             Log.d(
@@ -254,9 +267,14 @@ class FirestoreSyncManager {
         if (updatedDocuments.isNotEmpty()) {
             registerDevice(
                 firestoreLocalSettings = firestoreLocalSettings,
-                firestore = firestore,
+                firestore = getFirestore(),
                 firebaseUserId = firebaseUserId
             )
+        }
+
+        // Release lock
+        synchronized(syncLock) {
+            isSyncRunning = false;
         }
     }
 
@@ -315,6 +333,7 @@ class FirestoreSyncManager {
      * @param firebaseUserId Firebase Auth UserId, to identify which file belongs to user
      * @return uploaded file's `StorageReference`
      */
+    @Throws(Exception::class)
     fun createDBBackup(
         firebaseStorage: FirebaseStorage,
         databaseFile: File,
@@ -348,6 +367,7 @@ class FirestoreSyncManager {
      *
      * @return saved file
      */
+    @Throws(Exception::class)
     fun downloadDBBackup(
         firebaseStorage: FirebaseStorage,
         firebaseUserId: String,
