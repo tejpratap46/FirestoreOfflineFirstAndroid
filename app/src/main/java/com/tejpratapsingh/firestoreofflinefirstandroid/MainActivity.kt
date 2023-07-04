@@ -8,7 +8,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.ktx.Firebase
-import com.tejpratapsingh.firestoreofflinefirst.database.table.FirestoreSyncMaster
 import com.tejpratapsingh.firestoreofflinefirst.firestore.FirestoreOfflineManager
 import com.tejpratapsingh.firestoreofflinefirstandroid.memory.UserTable
 import kotlinx.coroutines.CoroutineScope
@@ -29,18 +28,14 @@ class MainActivity : AppCompatActivity() {
                 if (task.isSuccessful) {
                     // Sign in success, update UI with the signed-in user's information
                     Log.d(TAG, "createUserWithEmail:success")
-                    val user = auth.currentUser
-
-                    if (user == null) {
-                        return@addOnCompleteListener
-                    }
+                    val user = auth.currentUser ?: return@addOnCompleteListener
 
                     val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
                     // Initialise offline store
                     FirestoreOfflineManager.getInstance()
                         .initialise(applicationContext, firestore, user.uid)
-                        .initialiseSyncMasters(ArrayList())
+                        .initialiseSyncMasters(listOf())
 
                     FirestoreOfflineManager.getInstance().addData(
                         "user",
@@ -56,7 +51,6 @@ class MainActivity : AppCompatActivity() {
                     coroutineScope.async {
                         SyncManager().startSync(applicationContext)
                     }
-
                 } else {
                     // If sign in fails, display a message to the user.
                     Log.w(TAG, "createUserWithEmail:failure", task.exception)

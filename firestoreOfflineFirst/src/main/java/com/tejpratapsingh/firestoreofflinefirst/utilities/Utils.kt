@@ -5,19 +5,16 @@ import com.google.gson.reflect.TypeToken
 import java.lang.reflect.Type
 
 
-class Utils {
-
-    companion object {
-        fun getJsonToMap(json: String): MutableMap<String, Any> {
-            val gson = Gson()
-            val type: Type = object : TypeToken<MutableMap<String, Any>>() {}.type
-            return gson.fromJson(json, type)
-        }
-
-        fun getMapToJson(map: Map<String, Any>): String {
-            val gson = Gson()
-            return gson.toJson(map)
-        }
+object Utils {
+    
+    fun getJsonToMap(json: String): MutableMap<String, Any> {
+        val gson = Gson()
+        val type: Type = object : TypeToken<MutableMap<String, Any>>() {}.type
+        return gson.fromJson(json, type)
     }
 
+    fun getMapToJson(map: Map<String, Any>): String {
+        val gson = Gson()
+        return gson.toJson(map)
+    }
 }
